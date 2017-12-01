@@ -33,7 +33,6 @@ public class MainActivity extends Activity {
     TextView resultTextView;
 
     private BarcodeDetector barcodeDetector;
-    private CameraSource cameraSource;
     private final int cameraRequest = 1001;
 
     private final String CLASSNAME = getClass().getSimpleName();
@@ -51,81 +50,81 @@ public class MainActivity extends Activity {
                 .setBarcodeFormats(Barcode.QR_CODE)
                 .build();
 
+        vibrator = (Vibrator) getApplicationContext().getSystemService(Context.VIBRATOR_SERVICE);
 
-        cameraView.getHolder().addCallback(new SurfaceHolder.Callback() {
-            @Override
-            public void surfaceCreated(SurfaceHolder surfaceHolder) {
-                Log.i(CLASSNAME, "surfaceCreated");
-                try {
-                    DisplayManager displayManager = new DisplayManager(MainActivity.this);
-                    DisplayMetrics diplayMetrics = displayManager.getDiplayMetrics();
+        cameraView.getHolder().addCallback(callback);
 
-                    cameraSource = new CameraSource
-                            .Builder(MainActivity.this, barcodeDetector)
-                            .setRequestedPreviewSize(diplayMetrics.heightPixels, diplayMetrics.widthPixels)
-                            .setAutoFocusEnabled(true)
-                            .build();
+        barcodeDetector.setProcessor(barcodeProcessor);
+    }
 
-                    cameraSource.start(cameraView.getHolder());
+    private Vibrator vibrator;
+    Detector.Processor<Barcode> barcodeProcessor = new Detector.Processor<Barcode>() {
+        @Override
+        public void release() {
 
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+        }
 
-            @Override
-            public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
-                Log.i(CLASSNAME, "surfaceChanged");
+        @Override
+        public void receiveDetections(Detector.Detections<Barcode> detections) {
+            final SparseArray<Barcode> qrCode = detections.getDetectedItems();
 
-            }
+            if (qrCode.size() != 0) {
+                final String result = qrCode.valueAt(0).displayValue;// 값이 들어옴
 
-            @Override
-            public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+                if (!barcodeTemp.equals(result)) {
+                    long[] pattern = {500, 0, 0, 500};
 
-            }
-        });
-
-        barcodeDetector.setProcessor(new Detector.Processor<Barcode>() {
-            @Override
-            public void release() {
-                Log.i("barcodeDetector", "release");
-//                resultTextView.setText("");
-//                resultTextView.setVisibility(View.GONE);
-            }
-
-            @Override
-            public void receiveDetections(Detector.Detections<Barcode> detections) {
-                final SparseArray<Barcode> qrCode = detections.getDetectedItems();
-
-                if (qrCode.size() != 0) {
-                    final String result = qrCode.valueAt(0).displayValue;// 값이 들어옴
-
-                    if (!barcodeTemp.equals(result)) {
-                        Vibrator vibrator = (Vibrator) getApplicationContext().getSystemService(Context.VIBRATOR_SERVICE);
-                        long[] pattern = {500,0,0,500};
-
-                        vibrator.vibrate(pattern, -1); // -1 한번만 진동
-                    }
-
-                    barcodeTemp = result;
+                    vibrator.vibrate(pattern, -1); // -1 한번만 진동
 
                     resultTextView.post(new Runnable() {
                         @Override
                         public void run() {
-
                             resultTextView.setVisibility(View.VISIBLE);
                             resultTextView.setText(result);
                         }
                     });
-                } else {
-
                 }
 
+                barcodeTemp = result;
+
+            } else {
+
             }
-        });
-    }
+        }
+    };
 
+    SurfaceHolder.Callback callback = new SurfaceHolder.Callback() {
+        @Override
+        public void surfaceCreated(SurfaceHolder surfaceHolder) {
+            Log.i(CLASSNAME, "surfaceCreated");
+            try {
+                DisplayManager displayManager = new DisplayManager(MainActivity.this);
+                DisplayMetrics diplayMetrics = displayManager.getDiplayMetrics();
 
+                CameraSource cameraSource = new CameraSource
+                        .Builder(MainActivity.this, barcodeDetector)
+                        .setRequestedPreviewSize(diplayMetrics.heightPixels, diplayMetrics.widthPixels)
+                        .setAutoFocusEnabled(true)
+                        .build();
+
+                cameraSource.start(cameraView.getHolder());
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
+            Log.i(CLASSNAME, "surfaceChanged");
+
+        }
+
+        @Override
+        public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+
+        }
+    };
 
 
 }
